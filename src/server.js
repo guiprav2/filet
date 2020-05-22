@@ -39,6 +39,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/status', (req, res) => res.send('OK'));
+
 let upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
