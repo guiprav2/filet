@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import fs from 'fs';
+import helmet from 'helmet';
 import mime from 'mime';
 import multer from 'multer';
 import pathUtil from 'path';
@@ -23,6 +24,7 @@ app.use(rateLimit({
   max: rateLimitMaxReqs,
 }));
 
+app.use(helmet());
 app.use(cors());
 
 app.use((req, res, next) => {
