@@ -24,7 +24,7 @@ app.use(rateLimit({
   max: rateLimitMaxReqs,
 }));
 
-app.use(helmet());
+app.use(helmet({ frameguard: false }));
 app.use(cors());
 
 app.use((req, res, next) => {
