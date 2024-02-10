@@ -7,6 +7,7 @@ import multer from 'multer';
 import pathUtil from 'path';
 import rateLimit from 'express-rate-limit';
 import sharp from 'sharp';
+import { LRUCache } from 'lru-cache';
 import { v4 as uuidGen } from 'uuid';
 
 let app = express();
@@ -15,6 +16,7 @@ let trustProxy = JSON.parse(process.env.TRUST_PROXY || '0');
 let rateLimitWindow = JSON.parse(process.env.RATE_LIMIT_WINDOW || '60000');
 let rateLimitMaxReqs = JSON.parse(process.env.RATE_LIMIT_MAX_REQS || '20');
 let storagePath = process.env.STORAGE_PATH || `${process.cwd()}/storage`;
+let cache = new LRUCache({ max: 500 });
 
 if (trustProxy) {
   app.enable('trust proxy');
@@ -86,7 +88,12 @@ app.get('/:ns/:uuid', async (req, res) => {
   let { ns, uuid } = req.params;
   let filePath = `${storagePath}/${ns}/${uuid}`;
   if (!req.query.w) { res.sendFile(filePath) }
-  else { res.set('Content-Type', contentType); res.send(await sharp(filePath).resize({ width: Number(req.query.w) }).toBuffer()) }
+  else {
+    let result = cache.get(filePath) || await sharp(filePath).resize({ width: Number(req.query.w) }).toBuffer();
+    cache.set(filePath, result);
+    res.set('Content-Type', contentType);
+    res.send(result);
+  }
 });
 
 app.get('/:ns/:uuid/:slug', async (req, res) => {
@@ -96,7 +103,12 @@ app.get('/:ns/:uuid/:slug', async (req, res) => {
   let contentType = `${type}${charset ? `; charset=${charset}` : ''}`;
   let filePath = `${storagePath}/${ns}/${uuid}`;
   if (!req.query.w) { res.sendFile(filePath, { headers: { 'Content-Type': contentType } }) }
-  else { res.set('Content-Type', contentType); res.send(await sharp(filePath).resize({ width: Number(req.query.w) }).toBuffer()) }
+  else {
+    let result = cache.get(filePath) || await sharp(filePath).resize({ width: Number(req.query.w) }).toBuffer();
+    cache.set(filePath, result);
+    res.set('Content-Type', contentType);
+    res.send(result);
+  }
 });
 
 app.listen(port);
