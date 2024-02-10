@@ -6,6 +6,7 @@ import mime from 'mime';
 import multer from 'multer';
 import pathUtil from 'path';
 import rateLimit from 'express-rate-limit';
+import sharp from 'sharp';
 import { v4 as uuidGen } from 'uuid';
 
 let app = express();
@@ -81,21 +82,21 @@ app.post('/:ns/upload', upload.single('file'), (req, res) => {
   res.send({ uuid: file.uuid, url });
 });
 
-app.get('/:ns/:uuid', (req, res) => {
+app.get('/:ns/:uuid', async (req, res) => {
   let { ns, uuid } = req.params;
-  res.sendFile(`${storagePath}/${ns}/${uuid}`);
+  let filePath = `${storagePath}/${ns}/${uuid}`;
+  if (!req.query.w) { res.sendFile(filePath) }
+  else { res.set('Content-Type', contentType); res.send(await sharp(filePath).resize({ width: Number(req.query.w) }).toBuffer()) }
 });
 
-app.get('/:ns/:uuid/:slug', (req, res) => {
+app.get('/:ns/:uuid/:slug', async (req, res) => {
   let { ns, uuid, slug } = req.params;
-
   let type = mime.lookup(slug);
   let charset = mime.charsets.lookup(type);
   let contentType = `${type}${charset ? `; charset=${charset}` : ''}`;
-
-  res.sendFile(`${storagePath}/${ns}/${uuid}`, {
-    headers: { 'Content-Type': contentType },
-  });
+  let filePath = `${storagePath}/${ns}/${uuid}`;
+  if (!req.query.w) { res.sendFile(filePath, { headers: { 'Content-Type': contentType } }) }
+  else { res.set('Content-Type', contentType); res.send(await sharp(filePath).resize({ width: Number(req.query.w) }).toBuffer()) }
 });
 
 app.listen(port);
